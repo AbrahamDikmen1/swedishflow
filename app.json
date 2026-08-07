@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "SwedishFlow",
+    "slug": "swedishflow",
+    "version": "1.0.0",
+    "scheme": "swedishflow",
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "SwedishFlow",
+  "description": "En strukturerad app för att lära sig svenska från grunden.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
