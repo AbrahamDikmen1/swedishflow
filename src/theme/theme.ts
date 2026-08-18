@@ -6,6 +6,7 @@ export const theme = {
     textSecondary: '#667085', // Cool gray for subheadings and labels
     textMuted: '#98A2B3', // Lighter cool gray for placeholders/hints
     primary: '#1E4E8C', // Deep premium Scandinavian Blue
+    primaryDark: '#163B6B', // Deep dark tone for headers & pressed buttons
     primaryHover: '#163B6B', // Slightly darker blue for pressed state
     accent: '#E5B94E', // Damped warm yellow for future accents
     cardBackground: '#FFFFFF', // Clean card fields

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '../src/theme/theme';
 import Logo from '../src/components/Logo';
@@ -8,9 +8,11 @@ import Button from '../src/components/Button';
 import ScreenLayout from '../src/components/ScreenLayout';
 import FormMessage from '../src/components/FormMessage';
 import BackButton from '../src/components/BackButton';
+import { useAuth } from '../src/context/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn, loginAsDemo, isLoading: isAuthLoading } = useAuth();
 
   // Refs for sequential input focusing
   const passwordRef = useRef<TextInput>(null);
@@ -18,6 +20,7 @@ export default function LoginScreen() {
   // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Error & Status State
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -30,7 +33,6 @@ export default function LoginScreen() {
 
   const handleEmailChange = (text: string) => {
     setEmail(text);
-    // Remove error dynamically when corrected
     if (errors.email) {
       if (text.trim() && validateEmailFormat(text)) {
         setErrors((prev) => ({ ...prev, email: undefined }));
@@ -40,7 +42,6 @@ export default function LoginScreen() {
 
   const handlePasswordChange = (text: string) => {
     setPassword(text);
-    // Remove error dynamically when corrected
     if (errors.password) {
       if (text.trim()) {
         setErrors((prev) => ({ ...prev, password: undefined }));
@@ -48,17 +49,15 @@ export default function LoginScreen() {
     }
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const newErrors: { email?: string; password?: string } = {};
 
-    // Validate email
     if (!email.trim()) {
       newErrors.email = 'E-postadress krävs.';
     } else if (!validateEmailFormat(email)) {
       newErrors.email = 'E-postadressen måste ha ett giltigt format.';
     }
 
-    // Validate password
     if (!password.trim()) {
       newErrors.password = 'Lösenord krävs.';
     }
@@ -69,17 +68,42 @@ export default function LoginScreen() {
       return;
     }
 
-    // Clear errors and navigate to student dashboard
     setErrors({});
     setStatusMessage(null);
-    router.push('/home');
+    setIsSubmitting(true);
+
+    const result = await signIn(email, password);
+    setIsSubmitting(false);
+
+    if (result.success) {
+      if (result.user?.role === 'admin') {
+        router.replace('/admin');
+      } else {
+        router.replace('/(tabs)/home');
+      }
+    } else {
+      setStatusMessage(result.error || 'Inloggningen misslyckades. Kontrollera dina uppgifter.');
+    }
+  };
+
+  const handleQuickDemoLogin = async () => {
+    setIsSubmitting(true);
+    await loginAsDemo('student');
+    setIsSubmitting(false);
+    router.replace('/(tabs)/home');
   };
 
   return (
     <ScreenLayout>
       <View style={styles.header}>
         <BackButton
-          onPress={() => router.push('/')}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push('/');
+            }
+          }}
           accessibilityLabel="Gå tillbaka till välkomstskärmen"
           accessibilityHint="Navigerar tillbaka till välkomstsidan."
         />
@@ -88,12 +112,12 @@ export default function LoginScreen() {
 
       <View style={styles.titleSection}>
         <Text style={styles.title}>Välkommen tillbaka</Text>
-        <Text style={styles.subtitle}>Logga in och fortsätt där du slutade.</Text>
+        <Text style={styles.subtitle}>Logga in och fortsätt din språkinlärning.</Text>
       </View>
 
       <FormMessage
         message={statusMessage}
-        type="info"
+        type="error"
         onDismiss={() => setStatusMessage(null)}
       />
 
@@ -102,7 +126,7 @@ export default function LoginScreen() {
           label="E-postadress"
           value={email}
           onChangeText={handleEmailChange}
-          placeholder="exempel@epost.se"
+          placeholder="elev@exempel.se"
           keyboardType="email-address"
           autoCapitalize="none"
           autoComplete="email"
@@ -141,7 +165,22 @@ export default function LoginScreen() {
           </Pressable>
         </View>
 
-        <Button title="Logga in" onPress={handleLogin} />
+        <Button
+          title={isSubmitting || isAuthLoading ? 'Loggar in...' : 'Logga in'}
+          onPress={handleLogin}
+          disabled={isSubmitting || isAuthLoading}
+        />
+
+        <View style={styles.demoLoginWrapper}>
+          <Pressable
+            style={({ pressed }) => [styles.demoButton, pressed && { opacity: 0.8 }]}
+            onPress={handleQuickDemoLogin}
+            accessibilityRole="button"
+            accessibilityLabel="Snabb inloggning som elev i demoläge"
+          >
+            <Text style={styles.demoButtonText}>⚡ Snabbstarta som elev (Demoläge)</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.footerRow}>
@@ -152,6 +191,16 @@ export default function LoginScreen() {
           accessibilityLabel="Skapa konto-sida"
         >
           <Text style={styles.linkText}>Skapa konto</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.adminLinkRow}>
+        <Pressable
+          onPress={() => router.push('/admin/login')}
+          accessibilityRole="link"
+          accessibilityLabel="Gå till administratörsinloggning"
+        >
+          <Text style={styles.adminLinkText}>Är du lärare eller admin? Logga in här</Text>
         </Pressable>
       </View>
     </ScreenLayout>
@@ -193,6 +242,23 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.sm,
     fontWeight: '600',
   },
+  demoLoginWrapper: {
+    marginTop: theme.spacing.md,
+    alignItems: 'center',
+  },
+  demoButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  demoButtonText: {
+    fontSize: theme.typography.sizes.xs,
+    fontWeight: '600',
+    color: '#334155',
+  },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -208,5 +274,17 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.base,
     color: theme.colors.primary,
     fontWeight: '700',
+  },
+  adminLinkRow: {
+    alignItems: 'center',
+    marginTop: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  adminLinkText: {
+    fontSize: theme.typography.sizes.sm,
+    color: '#1E4E8C',
+    fontWeight: '600',
   },
 });

@@ -2,13 +2,13 @@ import { StudentDashboardData } from '../types/student';
 
 export const mockStudentDashboard: StudentDashboardData = {
   user: {
-    id: 'user_sofia_01',
-    firstName: 'Sofia',
+    id: 'user_default_01',
+    firstName: 'Elev',
     greeting: 'God morgon',
     levelCode: 'A1',
     levelTitle: 'Nybörjare',
     completedMissionsCount: 0,
-    totalMissionsCount: 3,
+    totalMissionsCount: 12,
   },
   currentMission: {
     id: '1',

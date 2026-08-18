@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,11 @@ import { SentenceBuilderExercise } from '../../types/lesson';
 import { theme } from '../../theme/theme';
 import Button from '../Button';
 import Icon from '../Icon';
+
+export interface WordToken {
+  id: string;
+  word: string;
+}
 
 interface SentenceBuilderStepProps {
   exercise: SentenceBuilderExercise;
@@ -39,7 +44,13 @@ export default function SentenceBuilderStep({
   onRetry,
   onNext,
 }: SentenceBuilderStepProps) {
-  const isCompleteSentence = placedWords.length === exercise.initialWords.length;
+  // Calculate expected token count based on correct target sentence words
+  const expectedTokenCount = useMemo(() => {
+    return exercise.correctSentence.trim().split(/\s+/).filter(Boolean).length;
+  }, [exercise.correctSentence]);
+
+  // Kontrollera button is enabled ONLY when exact number of tokens needed for target sentence is placed
+  const canCheck = placedWords.length === expectedTokenCount;
 
   return (
     <View style={styles.container}>
@@ -80,7 +91,7 @@ export default function SentenceBuilderStep({
           ) : (
             placedWords.map((word, index) => (
               <Pressable
-                key={`placed-${index}-${word}`}
+                key={`placed-slot-${index}-${word}`}
                 disabled={isChecked}
                 style={({ pressed }) => [
                   styles.wordTilePlaced,
@@ -113,7 +124,7 @@ export default function SentenceBuilderStep({
         <View style={styles.tilesContainer}>
           {availableWords.map((word, index) => (
             <Pressable
-              key={`avail-${index}-${word}`}
+              key={`bank-slot-${index}-${word}`}
               disabled={isChecked}
               style={({ pressed }) => [
                 styles.wordTileBank,
@@ -149,18 +160,23 @@ export default function SentenceBuilderStep({
           <Text style={styles.feedbackBodyText}>
             {isCorrect ? exercise.explanationCorrect : exercise.explanationIncorrect}
           </Text>
+          {!isCorrect && (
+            <Text style={styles.correctSentenceHint}>
+              Rätt mening: <Text style={styles.correctSentenceBold}>{exercise.correctSentence}</Text>
+            </Text>
+          )}
         </View>
       )}
 
-      {/* ACTION BUTTON */}
+      {/* ACTION BUTTONS */}
       <View style={styles.actionContainer}>
         {!isChecked ? (
           <Button
             title="Kontrollera"
             variant="primary"
-            disabled={!isCompleteSentence}
+            disabled={!canCheck}
             onPress={onCheck}
-            accessibilityLabel="Kontrollera meningen"
+            accessibilityLabel="Kontrollera din mening"
           />
         ) : (
           <View style={{ gap: theme.spacing.xs, width: '100%' }}>
@@ -175,7 +191,7 @@ export default function SentenceBuilderStep({
                 title="Försök igen"
                 variant="secondary"
                 onPress={onRetry}
-                accessibilityLabel="Försök igen att bygga meningen"
+                accessibilityLabel="Försök bygga meningen igen"
               />
             )}
           </View>
@@ -187,191 +203,197 @@ export default function SentenceBuilderStep({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    width: '100%',
   },
   instructionText: {
     fontSize: theme.typography.sizes.lg,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
+    lineHeight: 28,
   },
-
-  /* ANSWER BOX */
   answerBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
     padding: theme.spacing.md,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    minHeight: 110,
+    minHeight: 120,
     marginBottom: theme.spacing.lg,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   answerBoxCorrect: {
-    backgroundColor: '#E8F5E9',
-    borderColor: theme.colors.success,
+    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
   },
   answerBoxIncorrect: {
+    borderColor: '#EF4444',
     backgroundColor: '#FEF2F2',
-    borderColor: '#F87171',
   },
   answerBoxHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
   },
   answerBoxLabel: {
-    fontSize: theme.typography.sizes.xs,
+    fontSize: 13,
     fontWeight: '700',
-    color: theme.colors.textSecondary,
+    color: '#64748B',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   resetButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    paddingVertical: 4,
     paddingHorizontal: 8,
-    paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
+    gap: 4,
   },
   resetButtonPressed: {
-    backgroundColor: '#CBD5E1',
+    backgroundColor: '#E2E8F0',
   },
   resetButtonText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#334155',
+    color: '#64748B',
   },
   placeholderText: {
-    fontSize: theme.typography.sizes.sm,
+    fontSize: 15,
     color: '#94A3B8',
     fontStyle: 'italic',
-    marginTop: 8,
+    paddingVertical: theme.spacing.md,
+    textAlign: 'center',
   },
-
-  /* TILES */
   tilesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
     alignItems: 'center',
   },
   wordTilePlaced: {
     backgroundColor: '#1E4E8C',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      } as any,
-    }),
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   wordTilePlacedCorrect: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#059669',
   },
   wordTilePlacedIncorrect: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#F87171',
+    backgroundColor: '#DC2626',
   },
   wordTilePlacedText: {
     color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '700',
-    fontSize: theme.typography.sizes.base,
   },
   wordTilePlacedTextIncorrect: {
-    color: '#991B1B',
+    color: '#FFFFFF',
   },
-
-  /* BANK */
   bankContainer: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    padding: theme.spacing.md,
     marginBottom: theme.spacing.lg,
   },
   bankLabel: {
-    fontSize: theme.typography.sizes.xs,
+    fontSize: 13,
     fontWeight: '700',
-    color: theme.colors.textSecondary,
+    color: '#64748B',
     textTransform: 'uppercase',
-    marginBottom: theme.spacing.xs,
+    letterSpacing: 0.5,
+    marginBottom: theme.spacing.sm,
   },
   wordTileBank: {
-    backgroundColor: '#EBF3FA',
-    borderWidth: 1,
-    borderColor: '#1E4E8C',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      } as any,
-    }),
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   wordTilePressed: {
-    opacity: 0.8,
+    opacity: 0.75,
+    transform: [{ scale: 0.97 }],
   },
   wordTileBankText: {
-    color: '#1E4E8C',
+    color: '#0F172A',
+    fontSize: 16,
     fontWeight: '700',
-    fontSize: theme.typography.sizes.base,
   },
   bankEmptyText: {
-    fontSize: theme.typography.sizes.xs,
+    fontSize: 14,
     color: '#94A3B8',
     fontStyle: 'italic',
+    paddingVertical: 6,
   },
-
-  /* FEEDBACK BOX */
   feedbackBoxCorrect: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    borderRadius: 14,
     padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.success,
     marginBottom: theme.spacing.lg,
   },
   feedbackBoxIncorrect: {
     backgroundColor: '#FEF2F2',
-    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#EF4444',
+    borderRadius: 14,
     padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
     marginBottom: theme.spacing.lg,
   },
   feedbackHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   feedbackTitleCorrect: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: '700',
-    color: theme.colors.success,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#047857',
   },
   feedbackTitleIncorrect: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: '700',
-    color: '#DC2626',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#B91C1C',
   },
   feedbackBodyText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
+    fontSize: 14,
+    color: '#334155',
     lineHeight: 20,
   },
-  correctAnswerText: {
-    fontSize: theme.typography.sizes.sm,
+  correctSentenceHint: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#475569',
+  },
+  correctSentenceBold: {
     fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginTop: 6,
+    color: '#0F172A',
   },
   actionContainer: {
-    marginTop: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
+    width: '100%',
   },
 });

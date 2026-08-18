@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Pressable,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -42,9 +43,14 @@ export default function LearnScreen() {
         <View style={[styles.mainContainer, isTabletOrWeb && styles.tabletContainer]}>
           {/* DEL 1 – SIDHUVUD */}
           <View style={styles.headerContainer}>
-            <View style={styles.levelBadge}>
+            <Pressable
+              style={({ pressed }) => [styles.levelBadge, pressed && { opacity: 0.8 }]}
+              onPress={() => router.push('/learn/a1')}
+              accessibilityRole="button"
+              accessibilityLabel="Visa A1 nivåöversikt"
+            >
               <Text style={styles.levelBadgeText}>A1</Text>
-            </View>
+            </Pressable>
             <Text style={styles.pageTitle}>Kursöversikt</Text>
             <Text style={styles.pageSubtitle}>
               Följ din väg genom svenskan, ett uppdrag i taget.

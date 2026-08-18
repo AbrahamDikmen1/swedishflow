@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "npx expo start --web --port 3000",
     "build": "npx expo export --platform web",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "npx tsc scripts/testA1Parity.ts --outDir /tmp/test-parity --module commonjs --target es2020 --skipLibCheck --ignoreDeprecations 6.0 --ignoreConfig --types node && node /tmp/test-parity/scripts/testA1Parity.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.6",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-navigation/bottom-tabs": "^7.18.13",
+    "@supabase/supabase-js": "^2.112.3",
     "expo": "57.0.7",
     "expo-constants": "~57.0.6",
     "expo-linking": "~57.0.3",
@@ -28,6 +30,7 @@
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {
+    "@types/node": "^26.2.0",
     "@types/react": "~19.2.4",
     "typescript": "~6.0.3"
   }

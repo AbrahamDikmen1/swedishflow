@@ -4,20 +4,26 @@ import {
   LessonBlock,
   LessonBlockState,
   MultipleChoiceBlockState,
+  ListenChoiceBlockState,
   SentenceBuilderBlockState,
   FillBlankBlockState,
   MatchingBlockState,
   FreeTextBlockState,
+  SpeakBlockState,
+  AiRoleplayBlockState,
 } from '../../types/lesson';
 import IntroductionStep from './IntroductionStep';
 import DialogueStep from './DialogueStep';
 import VocabularyStep from './VocabularyStep';
 import ExplanationStep from './ExplanationStep';
 import MultipleChoiceStep from './MultipleChoiceStep';
+import { ListenChoiceStep } from './ListenChoiceStep';
 import SentenceBuilderStep from './SentenceBuilderStep';
 import FillBlankStep from './FillBlankStep';
 import MatchingStep from './MatchingStep';
 import FreeTextStep from './FreeTextStep';
+import { SpeakStep } from './SpeakStep';
+import { AiRoleplayStep } from './AiRoleplayStep';
 import SummaryStep from './SummaryStep';
 import { theme } from '../../theme/theme';
 
@@ -31,8 +37,9 @@ interface LessonBlockRendererProps {
   correctCount: number;
   totalExercisesCount: number;
   missionOrder: number;
+  nextMission?: { id: string; order: number; title: string } | null;
   onBackToOverview: () => void;
-  onFinishMission: () => void;
+  onFinishMission: (navigateToNext?: boolean) => void;
   onResetLesson: () => void;
   warningMessage?: string | null;
 }
@@ -47,6 +54,7 @@ export default function LessonBlockRenderer({
   correctCount,
   totalExercisesCount,
   missionOrder,
+  nextMission,
   onBackToOverview,
   onFinishMission,
   onResetLesson,
@@ -113,6 +121,18 @@ export default function LessonBlockRenderer({
       );
     }
 
+    case 'listen_choice': {
+      const lcState = blockState as ListenChoiceBlockState | undefined;
+      return (
+        <ListenChoiceStep
+          block={block}
+          state={lcState}
+          onStateChange={(newState) => onUpdateBlockState(block.id, newState)}
+          onNext={onNext}
+        />
+      );
+    }
+
     case 'sentence_builder': {
       const sbState: SentenceBuilderBlockState = (blockState as SentenceBuilderBlockState) || {
         type: 'sentence_builder',
@@ -155,10 +175,12 @@ export default function LessonBlockRenderer({
       const handleCheck = () => {
         const constructed = sbState.placedWords.join(' ');
         const target = block.exercise.correctSentence;
+        const normalize = (s: string) => s.replace(/[.!?]/g, '').trim().toLowerCase();
         const isCorrectSentence =
           constructed === target ||
           constructed + '.' === target ||
-          (target.endsWith('.') && constructed === target.slice(0, -1));
+          constructed + '?' === target ||
+          normalize(constructed) === normalize(target);
 
         onUpdateBlockState(block.id, {
           ...sbState,
@@ -330,8 +352,8 @@ export default function LessonBlockRenderer({
           isMatch = reg.test(trimmed);
         } catch {
           isMatch =
-            trimmed.toLowerCase().startsWith('jag bor') ||
-            trimmed.toLowerCase().startsWith('var bor');
+            trimmed.toLowerCase().startsWith('jag') ||
+            trimmed.toLowerCase().startsWith('var');
         }
 
         if (isMatch) {
@@ -378,6 +400,30 @@ export default function LessonBlockRenderer({
       );
     }
 
+    case 'speak': {
+      const spkState = blockState as SpeakBlockState | undefined;
+      return (
+        <SpeakStep
+          block={block}
+          state={spkState}
+          onStateChange={(newState) => onUpdateBlockState(block.id, newState)}
+          onNext={onNext}
+        />
+      );
+    }
+
+    case 'ai_roleplay': {
+      const aiState = blockState as AiRoleplayBlockState | undefined;
+      return (
+        <AiRoleplayStep
+          block={block}
+          state={aiState}
+          onStateChange={(newState) => onUpdateBlockState(block.id, newState)}
+          onNext={onNext}
+        />
+      );
+    }
+
     case 'summary':
       return (
         <SummaryStep
@@ -386,6 +432,7 @@ export default function LessonBlockRenderer({
           correctCount={correctCount}
           totalExercisesCount={totalExercisesCount}
           missionOrder={missionOrder}
+          nextMission={nextMission}
           onBackToOverview={onBackToOverview}
           onFinishMission={onFinishMission}
           onResetLesson={onResetLesson}

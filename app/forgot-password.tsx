@@ -8,16 +8,20 @@ import Button from '../src/components/Button';
 import ScreenLayout from '../src/components/ScreenLayout';
 import FormMessage from '../src/components/FormMessage';
 import BackButton from '../src/components/BackButton';
+import { useAuth } from '../src/context/AuthContext';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { resetPassword, isLoading: isAuthLoading } = useAuth();
 
   // Form State
   const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Status & Error States
   const [error, setError] = useState<string | undefined>(undefined);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const validateEmailFormat = (val: string) => {
     return /\S+@\S+\.\S+/.test(val);
@@ -25,7 +29,6 @@ export default function ForgotPasswordScreen() {
 
   const handleEmailChange = (text: string) => {
     setEmail(text);
-    // Remove error dynamically when correct
     if (error) {
       if (text.trim() && validateEmailFormat(text)) {
         setError(undefined);
@@ -33,7 +36,7 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  const handleSendResetLink = () => {
+  const handleSendResetLink = async () => {
     if (!email.trim()) {
       setError('E-postadress krävs.');
       setStatusMessage(null);
@@ -47,16 +50,33 @@ export default function ForgotPasswordScreen() {
     }
 
     setError(undefined);
-    setStatusMessage(
-      'Om det finns ett konto med den angivna e-postadressen kommer en återställningslänk att skickas.'
-    );
+    setIsSubmitting(true);
+    setStatusMessage(null);
+
+    const result = await resetPassword(email.trim());
+    setIsSubmitting(false);
+
+    if (result.success) {
+      setIsSuccess(true);
+      setStatusMessage(
+        'En återställningslänk har skickats till din e-postadress. Följ instruktionerna i mejlet för att välja ett nytt lösenord.'
+      );
+    } else {
+      setStatusMessage(result.error || 'Kunde inte skicka återställningslänk. Kontrollera adressen.');
+    }
   };
 
   return (
     <ScreenLayout>
       <View style={styles.header}>
         <BackButton
-          onPress={() => router.push('/login')}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push('/login');
+            }
+          }}
           accessibilityLabel="Tillbaka till inloggning"
           accessibilityHint="Navigerar till inloggningssidan."
         />
@@ -66,36 +86,49 @@ export default function ForgotPasswordScreen() {
       <View style={styles.titleSection}>
         <Text style={styles.title}>Glömt lösenordet?</Text>
         <Text style={styles.subtitle}>
-          Ange din e-postadress så skickar vi en länk för att återställa ditt lösenord.
+          Ange din registrerade e-postadress så skickar vi en säker återställningslänk via e-post.
         </Text>
       </View>
 
       <FormMessage
         message={statusMessage}
-        type="info"
+        type={isSuccess ? 'info' : 'error'}
         onDismiss={() => setStatusMessage(null)}
       />
 
-      <View style={styles.form}>
-        <FormField
-          label="E-postadress"
-          value={email}
-          onChangeText={handleEmailChange}
-          placeholder="exempel@epost.se"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-          textContentType="emailAddress"
-          returnKeyType="done"
-          onSubmitEditing={handleSendResetLink}
-          error={error}
-          accessibilityLabel="E-postadress återställningsfält"
-        />
+      {!isSuccess ? (
+        <View style={styles.form}>
+          <FormField
+            label="E-postadress"
+            value={email}
+            onChangeText={handleEmailChange}
+            placeholder="exempel@epost.se"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            textContentType="emailAddress"
+            returnKeyType="done"
+            onSubmitEditing={handleSendResetLink}
+            error={error}
+            accessibilityLabel="E-postadress återställningsfält"
+          />
 
-        <View style={styles.spacer} />
+          <View style={styles.spacer} />
 
-        <Button title="Skicka återställningslänk" onPress={handleSendResetLink} />
-      </View>
+          <Button
+            title={isSubmitting || isAuthLoading ? 'Skickar länk...' : 'Skicka återställningslänk'}
+            onPress={handleSendResetLink}
+            disabled={isSubmitting || isAuthLoading}
+          />
+        </View>
+      ) : (
+        <View style={styles.form}>
+          <Button
+            title="Tillbaka till inloggning"
+            onPress={() => router.push('/login')}
+          />
+        </View>
+      )}
 
       <View style={styles.footerRow}>
         <Pressable
@@ -144,7 +177,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: theme.spacing.md,
-    paddingBottom: theme.spacing.xxl, // bottom padding for comfortable scroll with keyboard open
+    paddingBottom: theme.spacing.xxl,
   },
   linkText: {
     fontSize: theme.typography.sizes.base,

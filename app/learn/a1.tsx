@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import BackButton from '../../src/components/BackButton';
 import MissionCard from '../../src/components/MissionCard';
+import AdminPreviewBanner from '../../src/components/AdminPreviewBanner';
 import { theme } from '../../src/theme/theme';
 import { useProgress } from '../../src/context/ProgressContext';
 
@@ -40,6 +41,7 @@ export default function A1LevelOverviewScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <AdminPreviewBanner />
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,

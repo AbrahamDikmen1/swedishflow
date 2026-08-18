@@ -33,29 +33,37 @@ export default function FillBlankStep({
   onRetry,
   onNext,
 }: FillBlankStepProps) {
-  // Render sentence with clean blank indicator
-  const parts = exercise.sentence.split('___');
+  // Normalize sentence with canonical blank slot (handles {blank}, ____, ___, __, _)
+  const rawSentence = exercise.sentence || '';
+  const parts = rawSentence.includes('{blank}')
+    ? rawSentence.split('{blank}')
+    : rawSentence.split(/_{1,}/);
+
+  const prefix = parts[0] ?? '';
+  const suffix = parts.slice(1).join('') ?? '';
 
   return (
     <View style={styles.container}>
-      {/* SENTENCE CARD WITH BLANK */}
+      {/* SENTENCE CARD WITH CANONICAL BLANK SLOT */}
       <View style={styles.sentenceCard}>
         <Text style={styles.sentenceText}>
-          {parts[0]}
+          <Text style={styles.sentencePartText}>{prefix}</Text>
           <Text
             style={[
               styles.blankHighlight,
+              !selectedOption && styles.blankHighlightEmpty,
+              selectedOption && styles.blankHighlightFilled,
               isChecked && isCorrect && styles.blankHighlightCorrect,
               isChecked && !isCorrect && styles.blankHighlightIncorrect,
             ]}
           >
-            {selectedOption ? ` ${selectedOption} ` : ' ___ '}
+            {selectedOption ? ` ${selectedOption} ` : ' _____ '}
           </Text>
-          {parts[1] || ''}
+          <Text style={styles.sentencePartText}>{suffix}</Text>
         </Text>
       </View>
 
-      <Text style={styles.selectLabel}>Välj rätt ord:</Text>
+      <Text style={styles.selectLabel}>Välj rätt ord för luckan:</Text>
 
       {/* OPTIONS LIST */}
       <View style={styles.optionsList}>
@@ -168,126 +176,142 @@ export default function FillBlankStep({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    width: '100%',
   },
   sentenceCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: theme.spacing.lg,
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
-    marginBottom: theme.spacing.lg,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sentenceText: {
-    fontSize: theme.typography.sizes.xl,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#0F172A',
     textAlign: 'center',
-    lineHeight: 28,
+    lineHeight: 36,
+  },
+  sentencePartText: {
+    color: '#0F172A',
   },
   blankHighlight: {
-    color: '#1E4E8C',
-    backgroundColor: '#EBF3FA',
-    borderRadius: 6,
     fontWeight: '800',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  blankHighlightEmpty: {
+    color: '#64748B',
+    backgroundColor: '#F1F5F9',
+  },
+  blankHighlightFilled: {
+    color: '#1E4E8C',
+    backgroundColor: '#E0F2FE',
   },
   blankHighlightCorrect: {
-    backgroundColor: '#E8F5E9',
-    color: '#1B5E20',
+    color: '#047857',
+    backgroundColor: '#D1FAE5',
   },
   blankHighlightIncorrect: {
-    backgroundColor: '#FEF2F2',
-    color: '#991B1B',
+    color: '#B91C1C',
+    backgroundColor: '#FEE2E2',
   },
   selectLabel: {
-    fontSize: theme.typography.sizes.sm,
+    fontSize: 14,
     fontWeight: '700',
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: theme.spacing.md,
   },
   optionsList: {
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.xl,
   },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: theme.spacing.md,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    gap: 12,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      } as any,
-    }),
-  },
-  optionCardPressed: {
-    backgroundColor: '#F1F5F9',
-    borderColor: '#CBD5E1',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   optionCardSelected: {
-    backgroundColor: '#EBF3FA',
     borderColor: '#1E4E8C',
+    backgroundColor: '#F0F9FF',
+    borderWidth: 2,
   },
   optionCardCorrect: {
-    backgroundColor: '#E8F5E9',
-    borderColor: theme.colors.success,
+    borderColor: '#10B981',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 2,
   },
   optionCardIncorrect: {
+    borderColor: '#EF4444',
     backgroundColor: '#FEF2F2',
-    borderColor: '#F87171',
+    borderWidth: 2,
+  },
+  optionCardPressed: {
+    opacity: 0.85,
   },
   radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
     borderColor: '#94A3B8',
-    justifyContent: 'center',
+    marginRight: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   radioCircleSelected: {
     borderColor: '#1E4E8C',
   },
   radioCircleCorrect: {
-    borderColor: theme.colors.success,
+    borderColor: '#10B981',
   },
   radioCircleIncorrect: {
-    borderColor: '#DC2626',
+    borderColor: '#EF4444',
   },
   radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#1E4E8C',
   },
   radioInnerCorrect: {
-    backgroundColor: theme.colors.success,
+    backgroundColor: '#10B981',
   },
   radioInnerIncorrect: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#EF4444',
   },
   optionText: {
-    fontSize: theme.typography.sizes.base,
+    fontSize: 17,
     fontWeight: '600',
-    color: theme.colors.textPrimary,
+    color: '#1E293B',
     flex: 1,
   },
   optionTextSelected: {
-    color: '#1E4E8C',
+    color: '#0C4A6E',
     fontWeight: '700',
   },
   optionTextCorrect: {
-    color: '#1B5E20',
+    color: '#065F46',
     fontWeight: '700',
   },
   optionTextIncorrect: {
@@ -295,43 +319,44 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   feedbackBoxCorrect: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    borderRadius: 14,
     padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.success,
     marginBottom: theme.spacing.lg,
   },
   feedbackBoxIncorrect: {
     backgroundColor: '#FEF2F2',
-    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#EF4444',
+    borderRadius: 14,
     padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
     marginBottom: theme.spacing.lg,
   },
   feedbackHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   feedbackTitleCorrect: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: '700',
-    color: theme.colors.success,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#047857',
   },
   feedbackTitleIncorrect: {
-    fontSize: theme.typography.sizes.sm,
-    fontWeight: '700',
-    color: '#DC2626',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#B91C1C',
   },
   feedbackBodyText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
+    fontSize: 14,
+    color: '#334155',
     lineHeight: 20,
   },
   actionContainer: {
-    marginTop: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
+    width: '100%',
   },
 });

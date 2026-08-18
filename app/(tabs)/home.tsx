@@ -16,6 +16,8 @@ import { theme } from '../../src/theme/theme';
 import { mockStudentDashboard } from '../../src/data/mockStudent';
 import Button from '../../src/components/Button';
 import { useProgress } from '../../src/context/ProgressContext';
+import { useAuth } from '../../src/context/AuthContext';
+import { getGreetingTitle, getTimeOfDayGreeting } from '../../src/utils/userDisplay';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -23,8 +25,9 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const isTabletOrWeb = width > 600;
 
+  const { user } = useAuth();
   const { activeMission, completedMissionIds, missions } = useProgress();
-  const { user, weeklyProgress } = mockStudentDashboard;
+  const { weeklyProgress } = mockStudentDashboard;
 
   const currentMission = activeMission;
   const completedCount = completedMissionIds.length;
@@ -48,20 +51,25 @@ export default function HomeScreen() {
           {/* 1. TOPPSEKTION (Header) */}
           <View style={styles.topHeader}>
             <View style={styles.greetingTextContainer}>
-              <Text style={styles.greetingSub}>{user.greeting}</Text>
-              <Text style={styles.greetingTitle}>Hej, {user.firstName}!</Text>
+              <Text style={styles.greetingSub}>{getTimeOfDayGreeting()}</Text>
+              <Text style={styles.greetingTitle}>{getGreetingTitle(user)}</Text>
               <Text style={styles.greetingSubtitle}>Redo att fortsätta din svenska?</Text>
             </View>
           </View>
 
           {/* 2. AKTUELL NIVÅ */}
-          <View style={styles.levelCard}>
+          <Pressable
+            style={({ pressed }) => [styles.levelCard, pressed && { opacity: 0.9 }]}
+            onPress={() => router.push('/learn/a1')}
+            accessibilityRole="button"
+            accessibilityLabel="Gå till nivå A1 Nybörjare"
+          >
             <View style={styles.levelHeaderRow}>
               <View style={styles.levelBadge}>
-                <Text style={styles.levelBadgeText}>{user.levelCode}</Text>
+                <Text style={styles.levelBadgeText}>A1</Text>
               </View>
               <View style={styles.levelTitleContainer}>
-                <Text style={styles.levelTitle}>{user.levelTitle}</Text>
+                <Text style={styles.levelTitle}>Nybörjare</Text>
                 <Text style={styles.levelProgressText}>
                   {completedCount} av {totalCount} uppdrag slutförda ({levelPercentage}%)
                 </Text>
@@ -70,7 +78,7 @@ export default function HomeScreen() {
             <View style={styles.progressBarTrack}>
               <View style={[styles.progressBarFill, { width: `${levelPercentage}%` }]} />
             </View>
-          </View>
+          </Pressable>
 
           {/* 3. FORTSÄTT MED KURSEN (Enkel huvudkort för lektionen) */}
           <View style={styles.continueCard}>

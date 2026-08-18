@@ -12,30 +12,47 @@ export type LessonBlockType =
   | 'vocabulary'
   | 'explanation'
   | 'multiple_choice'
+  | 'listen_choice'
   | 'sentence_builder'
   | 'fill_blank'
   | 'matching'
   | 'free_text'
+  | 'speak'
+  | 'ai_roleplay'
   | 'summary';
 
 export interface PhraseItem {
   phrase: string;
   explanation: string;
+  audioUrl?: string;
 }
 
 export interface ExampleItem {
   phrase: string;
   translation?: string;
+  audioUrl?: string;
 }
 
 export interface DialogueLine {
   speaker: string;
   text: string;
+  translation?: string;
   audioUrl?: string;
 }
 
 export interface MultipleChoiceExercise {
   question: string;
+  options: string[];
+  correctIndex: number;
+  explanationCorrect: string;
+  explanationIncorrect: string;
+  audioUrl?: string;
+}
+
+export interface ListenChoiceExercise {
+  prompt: string;
+  audioUrl?: string;
+  audioPlaceholderText?: string;
   options: string[];
   correctIndex: number;
   explanationCorrect: string;
@@ -80,6 +97,48 @@ export interface FreeTextExercise {
   explanationIncorrect: string;
   explanationEmpty: string;
   explanationIncomplete: string;
+  aiFeedbackPrompt?: string;
+}
+
+export interface SpeakExercise {
+  instruction: string;
+  targetPhrase: string;
+  translation?: string;
+  phoneticHint?: string;
+  audioUrl?: string;
+  tips?: string;
+}
+
+export interface AiRoleplayMessage {
+  id: string;
+  sender: 'ai' | 'user';
+  text: string;
+  timestamp: string;
+}
+
+export interface AiRoleplayFeedback {
+  strengths: string;
+  correction?: string;
+  improvedExample?: string;
+  usedTargetPhrases?: string[];
+}
+
+export interface AiRoleplayExercise {
+  title?: string;
+  instruction?: string;
+  scenario: string;
+  characterName: string;
+  characterRole: string;
+  userRole?: string;
+  languageLevel?: 'A1' | 'A2';
+  learningGoal?: string;
+  initialMessage: string;
+  goalDescription: string;
+  allowedTopics: string[];
+  suggestedPhrases: string[];
+  maxTurns?: number;
+  exitRule?: string;
+  showFeedback?: boolean;
 }
 
 export interface LessonBlockBase {
@@ -126,6 +185,11 @@ export interface MultipleChoiceBlock extends LessonBlockBase {
   exercise: MultipleChoiceExercise;
 }
 
+export interface ListenChoiceBlock extends LessonBlockBase {
+  type: 'listen_choice';
+  exercise: ListenChoiceExercise;
+}
+
 export interface SentenceBuilderBlock extends LessonBlockBase {
   type: 'sentence_builder';
   exercise: SentenceBuilderExercise;
@@ -146,11 +210,24 @@ export interface FreeTextBlock extends LessonBlockBase {
   exercise: FreeTextExercise;
 }
 
+export interface SpeakBlock extends LessonBlockBase {
+  type: 'speak';
+  exercise: SpeakExercise;
+}
+
+export interface AiRoleplayBlock extends LessonBlockBase {
+  type: 'ai_roleplay';
+  exercise: AiRoleplayExercise;
+}
+
 export interface SummaryBlock extends LessonBlockBase {
   type: 'summary';
   title: string;
   subtitle: string;
   summaryPhrases: string[];
+  expectedOutcomes?: string[];
+  nextMissionId?: string;
+  nextMissionTitle?: string;
 }
 
 export type LessonBlock =
@@ -159,10 +236,13 @@ export type LessonBlock =
   | VocabularyBlock
   | ExplanationBlock
   | MultipleChoiceBlock
+  | ListenChoiceBlock
   | SentenceBuilderBlock
   | FillBlankBlock
   | MatchingBlock
   | FreeTextBlock
+  | SpeakBlock
+  | AiRoleplayBlock
   | SummaryBlock;
 
 export interface LessonData {
@@ -176,6 +256,13 @@ export interface LessonData {
 /* Session state per block */
 export interface MultipleChoiceBlockState {
   type: 'multiple_choice';
+  selectedOption: number | null;
+  isChecked: boolean;
+  isCorrect: boolean;
+}
+
+export interface ListenChoiceBlockState {
+  type: 'listen_choice';
   selectedOption: number | null;
   isChecked: boolean;
   isCorrect: boolean;
@@ -209,6 +296,36 @@ export interface FreeTextBlockState {
   isChecked: boolean;
   isCorrect: boolean;
   feedbackType?: 'correct' | 'empty' | 'incomplete' | 'incorrect';
+  aiFeedback?: string;
+}
+
+export interface SpeakBlockState {
+  type: 'speak';
+  recorded: boolean;
+  hasSpoken: boolean;
+  isChecked: boolean;
+  isCorrect: boolean;
+  transcript?: string;
+  score?: number;
+  speechFeedback?: string;
+  evaluationStatus?:
+    | 'correct'
+    | 'almost'
+    | 'incorrect'
+    | 'empty'
+    | 'permission_denied'
+    | 'recorded_unverified'
+    | 'unsupported';
+}
+
+export interface AiRoleplayBlockState {
+  type: 'ai_roleplay';
+  messages: AiRoleplayMessage[];
+  completedGoal: boolean;
+  isChecked: boolean;
+  turnsCount?: number;
+  feedback?: AiRoleplayFeedback;
+  isDemo?: boolean;
 }
 
 export interface InfoBlockState {
@@ -218,10 +335,13 @@ export interface InfoBlockState {
 
 export type LessonBlockState =
   | MultipleChoiceBlockState
+  | ListenChoiceBlockState
   | SentenceBuilderBlockState
   | FillBlankBlockState
   | MatchingBlockState
   | FreeTextBlockState
+  | SpeakBlockState
+  | AiRoleplayBlockState
   | InfoBlockState;
 
 export interface LessonSessionState {

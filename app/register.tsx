@@ -8,9 +8,11 @@ import Button from '../src/components/Button';
 import ScreenLayout from '../src/components/ScreenLayout';
 import FormMessage from '../src/components/FormMessage';
 import BackButton from '../src/components/BackButton';
+import { useAuth } from '../src/context/AuthContext';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { signUp, isLoading: isAuthLoading } = useAuth();
 
   // Refs for sequential input focusing
   const emailRef = useRef<TextInput>(null);
@@ -23,6 +25,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Error & Banner States
   const [errors, setErrors] = useState<{
@@ -80,11 +83,11 @@ export default function RegisterScreen() {
   };
 
   const handleShowTermsNotice = () => {
-    setAlertMessage('Användarvillkor och integritetspolicy läggs till före lansering.');
+    setAlertMessage('Användarvillkor och integritetspolicy gäller för SwedishFlows språktjänster.');
     setStatusMessage(null);
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     const newErrors: typeof errors = {};
 
     if (!firstName.trim()) {
@@ -125,14 +128,29 @@ export default function RegisterScreen() {
     setErrors({});
     setAlertMessage(null);
     setStatusMessage(null);
-    router.push('/home');
+    setIsSubmitting(true);
+
+    const result = await signUp(email, password, firstName);
+    setIsSubmitting(false);
+
+    if (result.success) {
+      router.replace('/(tabs)/home');
+    } else {
+      setStatusMessage(result.error || 'Kunde inte skapa kontot.');
+    }
   };
 
   return (
     <ScreenLayout>
       <View style={styles.header}>
         <BackButton
-          onPress={() => router.push('/')}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push('/');
+            }
+          }}
           accessibilityLabel="Gå tillbaka"
           accessibilityHint="Navigerar tillbaka till välkomstsidan."
         />
@@ -146,7 +164,7 @@ export default function RegisterScreen() {
 
       <FormMessage
         message={statusMessage}
-        type="info"
+        type="error"
         onDismiss={() => setStatusMessage(null)}
       />
 
@@ -261,7 +279,11 @@ export default function RegisterScreen() {
 
         <View style={styles.spacer} />
 
-        <Button title="Skapa konto" onPress={handleRegister} />
+        <Button
+          title={isSubmitting || isAuthLoading ? 'Skapar konto...' : 'Skapa konto'}
+          onPress={handleRegister}
+          disabled={isSubmitting || isAuthLoading}
+        />
       </View>
 
       <View style={styles.footerRow}>
@@ -369,7 +391,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: theme.spacing.md,
-    paddingBottom: theme.spacing.xxl, // bottom padding after button for comfortable scroll with keyboard open
+    paddingBottom: theme.spacing.xxl,
   },
   footerText: {
     fontSize: theme.typography.sizes.base,

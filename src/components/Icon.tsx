@@ -16,19 +16,33 @@ export type IconName =
   | 'arrow-forward'
   | 'arrow-back'
   | 'checkmark'
+  | 'checkmark-circle'
   | 'lock-outline'
   | 'location-outline'
   | 'information-circle-outline'
   | 'chatbubble-outline'
+  | 'chatbubbles-outline'
   | 'refresh-outline'
   | 'create'
   | 'create-outline'
   | 'volume-high'
+  | 'volume-high-outline'
+  | 'mic'
   | 'mic-outline'
   | 'list-outline'
   | 'checkmark-circle-outline'
   | 'notifications-outline'
-  | 'shield-checkmark-outline';
+  | 'shield-checkmark-outline'
+  | 'alert-circle'
+  | 'paper-plane'
+  | 'pause'
+  | 'play'
+  | 'add'
+  | 'sync-outline'
+  | 'people-outline'
+  | 'search'
+  | 'search-outline'
+  | 'trash-outline';
 
 interface IconProps {
   name: IconName;
@@ -122,6 +136,13 @@ export default function Icon({ name, size = 20, color = '#1E4E8C' }: IconProps) 
         );
       case 'checkmark':
         return <Path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill={color} />;
+      case 'checkmark-circle':
+        return (
+          <Path
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+            fill={color}
+          />
+        );
       case 'lock-outline':
         return (
           <Path
@@ -144,6 +165,7 @@ export default function Icon({ name, size = 20, color = '#1E4E8C' }: IconProps) 
           />
         );
       case 'chatbubble-outline':
+      case 'chatbubbles-outline':
         return (
           <Path
             d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"
@@ -166,12 +188,14 @@ export default function Icon({ name, size = 20, color = '#1E4E8C' }: IconProps) 
           />
         );
       case 'volume-high':
+      case 'volume-high-outline':
         return (
           <Path
             d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"
             fill={color}
           />
         );
+      case 'mic':
       case 'mic-outline':
         return (
           <Path
@@ -204,6 +228,55 @@ export default function Icon({ name, size = 20, color = '#1E4E8C' }: IconProps) 
         return (
           <Path
             d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 19.93c-4.04-1.12-7-5.18-7-9.58V6.3l7-3.11 7 3.11v5.05c0 4.4-2.96 8.46-7 9.58zm-1.41-6.34L7.5 11.5l1.41-1.41 1.68 1.68 4.24-4.24 1.41 1.41z"
+            fill={color}
+          />
+        );
+      case 'alert-circle':
+        return (
+          <Path
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
+            fill={color}
+          />
+        );
+      case 'paper-plane':
+        return (
+          <Path
+            d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"
+            fill={color}
+          />
+        );
+      case 'pause':
+        return <Path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill={color} />;
+      case 'play':
+        return <Path d="M8 5v14l11-7z" fill={color} />;
+      case 'add':
+        return <Path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill={color} />;
+      case 'sync-outline':
+        return (
+          <Path
+            d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"
+            fill={color}
+          />
+        );
+      case 'people-outline':
+        return (
+          <Path
+            d="M16.5 13c-1.2 0-3.07.34-4.5 1-1.43-.66-3.3-1-4.5-1C5.33 13 1 14.08 1 16.25V19h22v-2.75c0-2.17-4.33-3.25-6.5-3.25zm-9-.75c1.79 0 3.25-1.46 3.25-3.25S9.29 5.75 7.5 5.75 4.25 7.21 4.25 9s1.46 3.25 3.25 3.25zm9 0c1.79 0 3.25-1.46 3.25-3.25S18.29 5.75 16.5 5.75 13.25 7.21 13.25 9s1.46 3.25 3.25 3.25z"
+            fill={color}
+          />
+        );
+      case 'trash-outline':
+        return (
+          <Path
+            d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"
+            fill={color}
+          />
+        );
+      case 'search':
+      case 'search-outline':
+        return (
+          <Path
+            d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
             fill={color}
           />
         );

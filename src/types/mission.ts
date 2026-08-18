@@ -7,8 +7,13 @@ export interface Mission {
   description: string;
   status: MissionStatus;
   estimatedMinutes: number;
+  levelCode?: string; // e.g. 'A1'
   chapterId?: string;
   skills?: string[];
   route?: string;
+  isPublished?: boolean;
+  goals?: string[];
+  knowledgeOutcomes?: string[];
+  nextPracticeSuggestions?: string[];
+  totalPoints?: number;
 }
-

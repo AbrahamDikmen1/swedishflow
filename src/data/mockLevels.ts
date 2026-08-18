@@ -10,7 +10,7 @@ export const mockLevels: LanguageLevel[] = [
     description: 'Lär dig grunderna och använd svenska i enkla vardagssituationer.',
     status: 'active',
     completedMissionsCount: 0,
-    totalMissionsCount: 3,
+    totalMissionsCount: 12,
     chapters: mockA1Chapters,
   },
 ];

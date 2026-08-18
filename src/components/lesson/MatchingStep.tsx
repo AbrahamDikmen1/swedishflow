@@ -36,8 +36,7 @@ export default function MatchingStep({
   // Deterministic shuffled answers list so order is static during rendering
   const availableAnswers = useMemo(() => {
     const list = exercise.pairs.map((p) => p.answer);
-    // Reverse or static shift so it's not in trivial 1:1 order
-    return [list[2], list[1], list[0]].filter(Boolean);
+    return [...list].reverse();
   }, [exercise.pairs]);
 
   const allAnswered = exercise.pairs.every((p) => !!userPairs[p.id]);

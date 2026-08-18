@@ -1,6 +1,10 @@
 {
   "name": "SwedishFlow",
-  "description": "En strukturerad app för att lära sig svenska från grunden.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "description": "En strukturerad och pedagogisk app för att lära sig svenska för invandrare (SFI A1) med full adminhantering och lektionsbyggare.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

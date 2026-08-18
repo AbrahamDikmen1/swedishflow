@@ -4,6 +4,7 @@ import { DialogueBlock } from '../../types/lesson';
 import { theme } from '../../theme/theme';
 import Button from '../Button';
 import Icon from '../Icon';
+import { AudioPlayer } from '../AudioPlayer';
 
 interface DialogueStepProps {
   block: DialogueBlock;
@@ -51,8 +52,17 @@ export default function DialogueStep({ block, onNext }: DialogueStepProps) {
                     {line.speaker}
                   </Text>
                 </View>
+
+                <AudioPlayer
+                  text={line.text}
+                  audioUrl={line.audioUrl}
+                  compact={true}
+                />
               </View>
               <Text style={styles.lineText}>{line.text}</Text>
+              {line.translation && (
+                <Text style={styles.translationText}>{line.translation}</Text>
+              )}
             </View>
           );
         })}
@@ -128,7 +138,8 @@ const styles = StyleSheet.create({
   speakerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    justifyContent: 'space-between',
+    marginBottom: 6,
   },
   speakerBadge: {
     paddingHorizontal: 8,
@@ -156,6 +167,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.textPrimary,
     lineHeight: 22,
+  },
+  translationText: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
   },
   actionContainer: {
     marginTop: theme.spacing.xs,

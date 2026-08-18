@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,13 @@ import Button from '../../../../src/components/Button';
 import Icon from '../../../../src/components/Icon';
 import LessonProgressHeader from '../../../../src/components/lesson/LessonProgressHeader';
 import LessonBlockRenderer from '../../../../src/components/lesson/LessonBlockRenderer';
+import AdminPreviewBanner from '../../../../src/components/AdminPreviewBanner';
 import { theme } from '../../../../src/theme/theme';
 import { a1Lessons } from '../../../../src/data/a1CourseData';
 import { LessonBlockState, LessonData } from '../../../../src/types/lesson';
 import { useProgress } from '../../../../src/context/ProgressContext';
+import { useCourse } from '../../../../src/context/CourseContext';
+import { useAuth } from '../../../../src/context/AuthContext';
 
 function createInitialBlockStates(lesson: LessonData): Record<string, LessonBlockState> {
   const states: Record<string, LessonBlockState> = {};
@@ -24,6 +27,13 @@ function createInitialBlockStates(lesson: LessonData): Record<string, LessonBloc
     if (block.type === 'multiple_choice') {
       states[block.id] = {
         type: 'multiple_choice',
+        selectedOption: null,
+        isChecked: false,
+        isCorrect: false,
+      };
+    } else if (block.type === 'listen_choice') {
+      states[block.id] = {
+        type: 'listen_choice',
         selectedOption: null,
         isChecked: false,
         isCorrect: false,
@@ -57,6 +67,21 @@ function createInitialBlockStates(lesson: LessonData): Record<string, LessonBloc
         isChecked: false,
         isCorrect: false,
       };
+    } else if (block.type === 'speak') {
+      states[block.id] = {
+        type: 'speak',
+        recorded: false,
+        hasSpoken: false,
+        isChecked: false,
+        isCorrect: false,
+      };
+    } else if (block.type === 'ai_roleplay') {
+      states[block.id] = {
+        type: 'ai_roleplay',
+        messages: [],
+        completedGoal: false,
+        isChecked: false,
+      };
     } else {
       states[block.id] = {
         type: 'info',
@@ -73,50 +98,127 @@ export default function MissionScreen() {
   const { width } = useWindowDimensions();
   const isTabletOrWeb = width > 600;
 
-  const { missions, completeMission, getMissionStatus, isLoading } = useProgress();
+  const { isAdmin } = useAuth();
+  const { missions, completeMission, getMissionStatus, isLoading: isProgressLoading } = useProgress();
+  const { getLesson } = useCourse();
+
+  const [lesson, setLesson] = useState<LessonData | null>(null);
+  const [isLoadingLesson, setIsLoadingLesson] = useState(true);
 
   const missionStatus = getMissionStatus(String(missionId));
   const mission = missions.find((m) => m.id === String(missionId));
-  const lesson = a1Lessons[String(missionId)];
-  const isValidAndUnlocked = Boolean(mission && lesson && missionStatus !== 'locked');
+  const isAllowed = isAdmin || (mission && missionStatus !== 'locked');
 
   const [currentBlockIndex, setCurrentBlockIndex] = useState<number>(0);
-  const [blockStates, setBlockStates] = useState<Record<string, LessonBlockState>>(() =>
-    lesson ? createInitialBlockStates(lesson) : {}
-  );
+  const [blockStates, setBlockStates] = useState<Record<string, LessonBlockState>>({});
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (lesson) {
-      setCurrentBlockIndex(0);
-      setBlockStates(createInitialBlockStates(lesson));
-      setWarningMessage(null);
+    if (missionId) {
+      setIsLoadingLesson(true);
+      getLesson(String(missionId))
+        .then((data) => {
+          setLesson(data);
+          if (data) {
+            setCurrentBlockIndex(0);
+            setBlockStates(createInitialBlockStates(data));
+            setWarningMessage(null);
+          }
+        })
+        .finally(() => setIsLoadingLesson(false));
     }
-  }, [lesson?.missionId]);
+  }, [missionId, getLesson]);
 
   const totalSteps = lesson?.blocks.length || 0;
   const activeBlock = lesson?.blocks[currentBlockIndex];
 
   // Dynamically calculate exercise scores from block states
-  const exerciseBlocks = lesson?.blocks.filter(
-    (b) =>
-      b.type === 'multiple_choice' ||
-      b.type === 'sentence_builder' ||
-      b.type === 'fill_blank' ||
-      b.type === 'matching' ||
-      b.type === 'free_text'
-  ) || [];
+  const exerciseBlocks =
+    lesson?.blocks.filter(
+      (b) =>
+        b.type === 'multiple_choice' ||
+        b.type === 'listen_choice' ||
+        b.type === 'sentence_builder' ||
+        b.type === 'fill_blank' ||
+        b.type === 'matching' ||
+        b.type === 'free_text' ||
+        b.type === 'speak' ||
+        b.type === 'ai_roleplay'
+    ) || [];
+
   const totalExercisesCount = exerciseBlocks.length;
+  const extractRawAnswers = useCallback(() => {
+    const raw: Record<string, any> = {};
+    for (const [blockId, st] of Object.entries(blockStates)) {
+      if (st.type === 'multiple_choice' || st.type === 'listen_choice' || st.type === 'fill_blank') {
+        raw[blockId] = (st as any).selectedOption;
+      } else if (st.type === 'sentence_builder') {
+        raw[blockId] = (st as any).placedWords;
+      } else if (st.type === 'matching') {
+        raw[blockId] = (st as any).userPairs;
+      } else if (st.type === 'free_text') {
+        raw[blockId] = (st as any).textInput;
+      } else if (st.type === 'speak') {
+        raw[blockId] = (st as any).hasSpoken || (st as any).recorded ? 'spoken' : null;
+      } else if (st.type === 'ai_roleplay') {
+        raw[blockId] = (st as any).completedGoal ? 'completed' : 'engaged';
+      }
+    }
+    return raw;
+  }, [blockStates]);
+
   const completedCount = exerciseBlocks.filter((b) => {
     const st = blockStates[b.id];
     return st && 'isChecked' in st && st.isChecked;
   }).length;
+
   const correctCount = exerciseBlocks.filter((b) => {
     const st = blockStates[b.id];
-    return st && 'isChecked' in st && st.isChecked && st.isCorrect;
+    return st && 'isChecked' in st && st.isChecked && (st as any).isCorrect !== false;
   }).length;
 
-  // Pure navigation back to overview WITHOUT completing mission
+  const allExercisesChecked =
+    totalExercisesCount > 0 && completedCount === totalExercisesCount;
+
+  // Auto-save completion when reaching the result/summary screen
+  useEffect(() => {
+    if (
+      mission &&
+      lesson &&
+      activeBlock?.type === 'summary' &&
+      allExercisesChecked
+    ) {
+      completeMission(mission.id, {
+        userAnswers: extractRawAnswers(),
+        idempotencyKey: `attempt_${mission.id}_${currentBlockIndex}_${lesson.blocks.length}`,
+        correctCount,
+        totalExercises: totalExercisesCount,
+      });
+    }
+  }, [
+    mission?.id,
+    lesson?.missionId,
+    activeBlock?.type,
+    allExercisesChecked,
+    correctCount,
+    totalExercisesCount,
+    currentBlockIndex,
+    lesson?.blocks.length,
+    extractRawAnswers,
+    completeMission,
+  ]);
+
+  // Calculate next mission if available
+  const nextMissionOrder = mission ? mission.order + 1 : 0;
+  const nextMissionItem = missions.find((m) => m.order === nextMissionOrder);
+  const nextMission = nextMissionItem
+    ? {
+        id: nextMissionItem.id,
+        order: nextMissionItem.order,
+        title: nextMissionItem.title,
+      }
+    : null;
+
   const handleBackToOverview = () => {
     if (router.canGoBack()) {
       router.back();
@@ -125,31 +227,45 @@ export default function MissionScreen() {
     }
   };
 
-  // Explicit completion triggered only from summary finish button
-  const handleFinishMission = async () => {
+  const handleFinishMission = async (navigateToNext?: boolean) => {
     if (!lesson || !mission) return;
 
     // Defensive check: find first unchecked exercise block
     const uncheckedIndex = lesson.blocks.findIndex((b) => {
       const isGradable =
         b.type === 'multiple_choice' ||
+        b.type === 'listen_choice' ||
         b.type === 'sentence_builder' ||
         b.type === 'fill_blank' ||
         b.type === 'matching' ||
-        b.type === 'free_text';
+        b.type === 'free_text' ||
+        b.type === 'speak' ||
+        b.type === 'ai_roleplay';
       if (!isGradable) return false;
       const st = blockStates[b.id];
       return !st || !('isChecked' in st) || !st.isChecked;
     });
 
     if (uncheckedIndex !== -1) {
-      setWarningMessage('Du har okontrollerade övningar kvar! Du skickas nu till den första okontrollerade övningen.');
+      setWarningMessage(
+        'Du har okontrollerade övningar kvar! Du skickas nu till den första okontrollerade övningen.'
+      );
       setCurrentBlockIndex(uncheckedIndex);
       return;
     }
 
     setWarningMessage(null);
-    await completeMission(mission.id);
+    await completeMission(mission.id, {
+      userAnswers: extractRawAnswers(),
+      idempotencyKey: `attempt_${mission.id}_finish_${Date.now()}`,
+      correctCount,
+      totalExercises: totalExercisesCount,
+    });
+
+    if (navigateToNext && nextMission) {
+      router.replace(`/learn/a1/mission/${nextMission.id}`);
+      return;
+    }
 
     if (router.canGoBack()) {
       router.back();
@@ -158,7 +274,6 @@ export default function MissionScreen() {
     }
   };
 
-  // Reset local lesson session
   const handleResetLesson = () => {
     if (lesson) {
       setCurrentBlockIndex(0);
@@ -167,17 +282,17 @@ export default function MissionScreen() {
     }
   };
 
-  if (isLoading) {
+  if (isProgressLoading || isLoadingLesson) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={[styles.mainContainer, styles.errorContainer, isTabletOrWeb && styles.tabletContainer]}>
-          <Text style={styles.errorSubtitle}>Laddar uppdrag...</Text>
+          <Text style={styles.errorSubtitle}>Laddar uppdrag och övningar...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!isValidAndUnlocked || !mission || !lesson || !activeBlock) {
+  if (!isAllowed || !mission || !lesson || !activeBlock) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={[styles.mainContainer, styles.errorContainer, isTabletOrWeb && styles.tabletContainer]}>
@@ -186,7 +301,7 @@ export default function MissionScreen() {
             <Icon name="lock-outline" size={32} color="#64748B" />
             <Text style={styles.errorTitle}>Uppdraget hittades inte eller är låst</Text>
             <Text style={styles.errorSubtitle}>
-              Det begärda uppdraget är inte tillgängligt. Du kan bara öppna slutförda eller aktiva uppdrag.
+              Det begärda uppdraget är inte tillgängligt ännu. Klara tidigare uppdrag för att låsa upp detta.
             </Text>
             <View style={styles.buttonWrapper}>
               <Button
@@ -212,15 +327,17 @@ export default function MissionScreen() {
     if (!activeBlock) return;
     const isGradable =
       activeBlock.type === 'multiple_choice' ||
+      activeBlock.type === 'listen_choice' ||
       activeBlock.type === 'sentence_builder' ||
       activeBlock.type === 'fill_blank' ||
       activeBlock.type === 'matching' ||
-      activeBlock.type === 'free_text';
+      activeBlock.type === 'free_text' ||
+      activeBlock.type === 'speak' ||
+      activeBlock.type === 'ai_roleplay';
 
     if (isGradable) {
       const st = blockStates[activeBlock.id];
       if (!st || !('isChecked' in st) || !st.isChecked) {
-        // User must check exercise before proceeding
         return;
       }
     }
@@ -233,35 +350,40 @@ export default function MissionScreen() {
     setCurrentBlockIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  const handleUpdateBlockState = (blockId: string, newState: LessonBlockState) => {
-    setWarningMessage(null);
+  const handleUpdateBlockState = (blockId: string, state: LessonBlockState) => {
     setBlockStates((prev) => ({
       ...prev,
-      [blockId]: newState,
+      [blockId]: state,
     }));
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          isTabletOrWeb && styles.tabletScrollContent,
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={[styles.mainContainer, isTabletOrWeb && styles.tabletContainer]}>
-          {/* LESSON PROGRESS HEADER */}
-          <LessonProgressHeader
-            missionOrder={lesson.order}
-            totalMissions={lesson.totalMissions}
-            title={lesson.title}
-            blocks={lesson.blocks}
-            currentIndex={currentBlockIndex}
-            onBack={handleLessonHeaderBack}
-          />
+      <AdminPreviewBanner />
+      <View style={[styles.mainContainer, isTabletOrWeb && styles.tabletContainer]}>
+        <LessonProgressHeader
+          missionOrder={lesson.order}
+          totalMissions={missions.length || 12}
+          title={lesson.title}
+          blocks={lesson.blocks}
+          currentIndex={currentBlockIndex}
+          currentStep={currentBlockIndex + 1}
+          totalSteps={totalSteps}
+          onBack={handleLessonHeaderBack}
+        />
 
-          {/* DYNAMIC BLOCK RENDERER */}
+        {warningMessage && (
+          <View style={styles.warningBanner}>
+            <Icon name="alert-circle" size={18} color="#D97706" />
+            <Text style={styles.warningText}>{warningMessage}</Text>
+          </View>
+        )}
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <LessonBlockRenderer
             block={activeBlock}
             blockState={blockStates[activeBlock.id]}
@@ -272,13 +394,14 @@ export default function MissionScreen() {
             correctCount={correctCount}
             totalExercisesCount={totalExercisesCount}
             missionOrder={lesson.order}
+            nextMission={nextMission}
             onBackToOverview={handleBackToOverview}
             onFinishMission={handleFinishMission}
             onResetLesson={handleResetLesson}
             warningMessage={warningMessage}
           />
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -286,155 +409,38 @@ export default function MissionScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  scrollContent: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.xxl,
-  },
-  tabletScrollContent: {
-    paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
   },
   mainContainer: {
-    width: '100%',
-  },
-  tabletContainer: {
-    maxWidth: 640,
-    alignSelf: 'center',
-  },
-
-  /* TOP BAR (used for placeholder/error screens) */
-  topBar: {
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.md,
-  },
-  headerContainer: {
-    marginBottom: theme.spacing.xl,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: theme.spacing.xs,
-  },
-  badge: {
-    backgroundColor: '#1E4E8C',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: theme.typography.sizes.xs,
-  },
-  statusPillCompleted: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: theme.colors.success,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  statusPillCompletedText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 11,
-  },
-  statusPillActive: {
-    backgroundColor: '#EBF3FA',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  statusPillActiveText: {
-    color: '#1E4E8C',
-    fontWeight: '700',
-    fontSize: 11,
-  },
-  missionTitle: {
-    fontSize: theme.typography.sizes.xxl,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  missionDescription: {
-    fontSize: theme.typography.sizes.base,
-    color: theme.colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: theme.spacing.md,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  metaText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-
-  /* PLACEHOLDER CARD */
-  placeholderCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: theme.spacing.xl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    shadowColor: '#1E4E8C',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  placeholderIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#EBF3FA',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  placeholderTitle: {
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-    textAlign: 'center',
-  },
-  placeholderBody: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: theme.spacing.lg,
-  },
-  buttonWrapper: {
-    width: '100%',
-  },
-
-  /* ERROR STATE */
-  errorContainer: {
-    padding: theme.spacing.lg,
     flex: 1,
   },
+  tabletContainer: {
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xxl,
+  },
+  errorContainer: {
+    padding: theme.spacing.md,
+    justifyContent: 'center',
+  },
   errorCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.xl,
     alignItems: 'center',
-    marginTop: theme.spacing.xl,
+    marginTop: theme.spacing.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: theme.colors.border,
   },
   errorTitle: {
-    fontSize: theme.typography.sizes.lg,
+    fontSize: theme.typography.sizes.xl,
     fontWeight: '700',
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.md,
@@ -442,10 +448,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorSubtitle: {
-    fontSize: theme.typography.sizes.sm,
+    fontSize: theme.typography.sizes.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
     marginBottom: theme.spacing.lg,
+    lineHeight: 22,
+  },
+  buttonWrapper: {
+    width: '100%',
+    maxWidth: 240,
+  },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: theme.borderRadius.md,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.xs,
+    padding: theme.spacing.sm,
+    gap: 8,
+  },
+  warningText: {
+    fontSize: theme.typography.sizes.xs,
+    color: '#92400E',
+    flex: 1,
+    fontWeight: '600',
   },
 });

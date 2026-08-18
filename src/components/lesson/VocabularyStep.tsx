@@ -4,6 +4,7 @@ import { VocabularyBlock } from '../../types/lesson';
 import { theme } from '../../theme/theme';
 import Button from '../Button';
 import Icon from '../Icon';
+import { AudioPlayer } from '../AudioPlayer';
 
 interface VocabularyStepProps {
   block: VocabularyBlock;
@@ -23,7 +24,14 @@ export default function VocabularyStep({
       <View style={styles.phrasesList}>
         {block.phrases.map((item, idx) => (
           <View key={idx} style={styles.phraseCard}>
-            <Text style={styles.phraseMainText}>{item.phrase}</Text>
+            <View style={styles.phraseHeaderRow}>
+              <Text style={styles.phraseMainText}>{item.phrase}</Text>
+              <AudioPlayer
+                text={item.phrase}
+                audioUrl={item.audioUrl}
+                compact={true}
+              />
+            </View>
             <Text style={styles.phraseExplanationText}>{item.explanation}</Text>
           </View>
         ))}
@@ -40,7 +48,7 @@ export default function VocabularyStep({
             title="Tillbaka"
             variant="secondary"
             onPress={onBack}
-            accessibilityLabel="Gå tillbaka till introduktionen"
+            accessibilityLabel="Gå tillbaka"
           />
         </View>
         <View style={styles.flexButton}>
@@ -48,7 +56,7 @@ export default function VocabularyStep({
             title="Fortsätt"
             variant="primary"
             onPress={onNext}
-            accessibilityLabel="Gå vidare till kontrollfrågan"
+            accessibilityLabel="Gå vidare"
           />
         </View>
       </View>
@@ -81,11 +89,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  phraseHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   phraseMainText: {
     fontSize: theme.typography.sizes.base,
     fontWeight: '700',
     color: theme.colors.textPrimary,
-    marginBottom: 2,
+    flex: 1,
   },
   phraseExplanationText: {
     fontSize: theme.typography.sizes.xs,
